@@ -1,0 +1,10 @@
+note:  xinyi has granted a really high
+       signal-to-noise ratio
+
+note:  sla definition is different between papers
+
+note:  packets can be variable size
+
+note:  there are doubts re: video packet interarrival time 
+
+note:  hua et al does not have a deadline tolerance as per xinyi's simulator

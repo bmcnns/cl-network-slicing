@@ -2,7 +2,7 @@
 
 (defun packet-expired-p (packet current-slot)
   "Returns T if the packet exceeds the deadline by tolerance amount."
-  (let ((deadline-tolerance 5))
+  (let ((deadline-tolerance 0))
     (> (- current-slot (packet-deadline packet))
        deadline-tolerance)))
 

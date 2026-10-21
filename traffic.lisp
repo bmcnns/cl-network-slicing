@@ -1,41 +1,41 @@
 (in-package :cl-network-slicing)
 
-(defun sample-uniform (a b)
-  "Returns a number uniformly sampled in [a,b)."
-  (+ a (random (- b a))))
 
-(defun sample-exponential (lambda)
-  "Returns a number sampled from an exponential distribution parameterized by lambda."
-  (/ (- (log (- 1d0 (random 1d0)))) lambda))
 
 (defun sample-interarrival (slice-type)
   "Returns a number indicating how many slots until the next packet."
   (ecase slice-type
-    (:volte (sample-uniform 1.0d0 3.0d0))
-    (:video (min (sample-exponential 2.0d0) 40.0d0))
-    (:urllc (sample-exponential 4.0d0))))
+    (:volte (sample-uniform 0d0 320d0))
+    (:video (sample-truncated-pareto 5 1.2d0 25))
+    (:urllc (sample-exponential (/ 1d0 360d0)))))
+
+(defun slice->packet-size (slice)
+  "Given a slice, return the number of bits that a packet should be."
+  (ecase slice
+    (:volte 320.0d0)
+    (:video (bytes->bits (sample-truncated-pareto 40 1.2d0 250)))
+    (:urllc (kilobytes->bits (random-choice '(6.4d0 12.8d0 19.2d0 25.6d0 32d0))))))
 
 (defun generate-packets (user start-slot)
   "Generates the packets that arrives for a user within a scheduling window."
-  (let* ((slice (user-slice user))
-	 (packet-size (ecase slice
-			(:volte 1020d0)
-			(:urllc 500d0)
-			(:video 1280d0)))
-	 (deadline (ecase slice
-		     (:volte (+ start-slot 40.0d0))
-		     (:urllc (+ start-slot 30.0d0))
-		     (:video (+ start-slot 40.0d0)))))
-    (loop for slot = (+ start-slot (sample-interarrival slice))
+  (let* ((slice (user-slice user)))
+    (loop for slot = (user-next-arrival user)
 	    then (+ slot (sample-interarrival slice))
+	  for arrival = (floor slot)
 	  while (< slot (+ start-slot *slots-per-step*))
-	  collect (make-packet
-		   :user-id (user-id user)
-		   :slice slice
-		   :arrival-time (floor slot)
-		   :size packet-size
-		   :deadline deadline
-		   :remaining packet-size))))
-		   
+	  collect (let ((packet-size (slice->packet-size slice)))
+		    (make-packet
+		     :user-id (user-id user)
+		     :slice slice
+		     :arrival-time arrival
+		     :size packet-size
+		     :deadline (+ arrival
+				  (ecase slice
+				    (:volte 20)
+				    (:video 20)
+				    (:urllc 2)))
+		     :remaining packet-size))
+	  finally (setf (user-next-arrival user) slot))))
+  
 			    
   

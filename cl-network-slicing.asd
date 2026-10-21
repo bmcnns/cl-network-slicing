@@ -12,5 +12,6 @@ native environment for evolving Tangled Program  Graph (TPG) agents."
 	       (:file "user")
 	       (:file "scheduler")
 	       (:file "transmission")
+	       (:file "metrics")
 	       (:file "environment")
 	       (:file "main")))

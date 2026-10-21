@@ -1,7 +1,6 @@
 (in-package :cl-network-slicing)
 
 (defstruct packet
-  (id (gensym))
   user-id
   slice
   arrival-time
@@ -19,7 +18,6 @@
   (round-robin-pos 0)
   current-packet
   (arrived 0)
-  (successful 0)
   (dropped-timeout 0)
   (dropped-overflow 0))
   
