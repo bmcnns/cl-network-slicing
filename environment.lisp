@@ -132,7 +132,7 @@
     (let* ((obs (loop for (name . nil) in *users-per-slice*
 		      for slice = (find name (environment-slices env) :key #'slice-name)
 		      collect (slice-arrived slice)))
-	   (spectrum-efficiency (spectrum-efficiency (environment-users env)))
+	   (spectrum-efficiency (spectrum-efficiency (environment-slices env)))
 	   (volte (find :volte (environment-slices env) :key #'slice-name))
 	   (video (find :video (environment-slices env) :key #'slice-name))
 	   (urllc (find :urllc (environment-slices env) :key #'slice-name))

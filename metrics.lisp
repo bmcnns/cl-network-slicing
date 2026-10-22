@@ -4,11 +4,14 @@
   (/ (user-bits-transmitted user)
      (* *slot-duration* *slots-per-step*)))
   
-(defun spectrum-efficiency (users)
-  (/ (/ (reduce #'+ (mapcar #'user-bits-transmitted users))
-	(* *slot-duration* *slots-per-step*))
+(defun spectrum-efficiency (slices)
+  (/ (loop for slice in slices
+	for bandwidth = (slice-bandwidth slice)
+	for power = (slice-power slice)
+	sum (loop for user in (slice-users slice)
+		  sum (shannon-rate (user-channel-gain user) power bandwidth)))
      (mhz->hz *network-bandwidth*)))
-
+	
 (defun rate-sla-met-p (user slice)
   (let* ((gain (user-channel-gain user))
 	 (power (slice-power slice))
