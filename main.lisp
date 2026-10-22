@@ -35,7 +35,7 @@
 			      (progn
 				(format t "ENV-RESET~%")
 				(multiple-value-bind (obs info)
-				    (env-reset *env*)
+				    (env-reset *env* :seed (cdr (assoc :seed message)))
 				  (write-line
 				   (json:encode-json-alist-to-string `((:obs . ,obs) (:info . ,info)))
 				   stream))
