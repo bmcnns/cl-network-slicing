@@ -24,6 +24,8 @@
 			   (setf (packet-remaining packet) 0.0d0)
 			   (incf (user-bits-transmitted user) remaining)
 			   (setf (packet-transmission-complete packet) slot)
+			   (when (rate-sla-met-p user slice)
+			     (incf (slice-successful slice)))
 			   (dequeue (user-queue user))
 			   (setf (slice-current-packet slice) nil))
 			 (let ((sent (* rate time-left)))

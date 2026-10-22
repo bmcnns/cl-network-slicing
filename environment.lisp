@@ -75,6 +75,7 @@
 		     no-negatives-action)))
 	     (reset-step-counters (slice)
 	       (setf (slice-arrived slice) 0)
+	       (setf (slice-successful slice) 0)
 	       (setf (slice-dropped-timeout slice) 0)
 	       (setf (slice-dropped-overflow slice) 0)))
 
@@ -168,6 +169,9 @@
 	(values obs rew nil trunc `((:volte-arrivals . ,(slice-arrived volte))
 				    (:video-arrivals . ,(slice-arrived video))
 				    (:urllc-arrivals . ,(slice-arrived urllc))
+				    (:volte-successful . ,(slice-successful volte))
+				    (:video-successful . ,(slice-successful video))
+				    (:urllc-successful . ,(slice-successful urllc))
 				    (:volte-bandwidth . ,(hz->mhz volte-bandwidth))
 				    (:video-bandwidth . ,(hz->mhz video-bandwidth))
 				    (:urllc-bandwidth . ,(hz->mhz urllc-bandwidth))

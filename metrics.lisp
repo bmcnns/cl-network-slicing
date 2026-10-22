@@ -23,19 +23,11 @@
 	       (:video 100000000)))))
   
 (defun slice-success-rate (slice)
-  "Fraction of this step's arrivals in SLICE that met both SLAs.
+  "Number of successful packets over number of packets that arrived.
    1.0 if nothing arrived."
-  (flet ((on-time-p (packet)
-           (let ((done (packet-transmission-complete packet)))
-             (and done (<= done (packet-deadline packet))))))
-    (if (zerop (slice-arrived slice))
-        1d0
-        (float (/ (loop for user in (slice-users slice)
-                        sum (if (rate-sla-met-p user slice)
-                                (count-if #'on-time-p (user-arrivals user))
-                                0))
-                  (slice-arrived slice))
-               1d0))))
+  (if (zerop (slice-arrived slice))
+      1d0
+      (float (/ (slice-successful slice) (slice-arrived slice)) 1d0)))
 
 (defun utility (spectrum-efficiency volte-ssr video-ssr urllc-ssr)
   "Returns a value indicating how successful the network policy is."
