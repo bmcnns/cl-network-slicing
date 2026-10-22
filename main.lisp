@@ -18,7 +18,7 @@
 			      (format t "SPACES~%")
 			      (write-line
 			       (json:encode-json-alist-to-string `((:num-observations . 3)
-							     (:num-actions . 1)))
+							     (:num-actions . 3)))
 			       stream)
 			      (finish-output stream))
 
