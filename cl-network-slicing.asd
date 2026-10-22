@@ -3,6 +3,7 @@
 native environment for evolving Tangled Program  Graph (TPG) agents."
   :version "0.1"
   :author "Bryce MacInnis, Xinyi Li"
+  :depends-on (:usocket :bordeaux-threads :cl-json)
   :components ((:file "package")
 	       (:file "utils")
 	       (:file "globals")

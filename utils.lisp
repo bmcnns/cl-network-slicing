@@ -39,6 +39,9 @@
 (defun mhz->hz (n)
   (* 1d6 n))
 
+(defun hz->mhz (n)
+  (/ n 1d6))
+
 (defun sample-uniform (a b)
   "Returns a number uniformly sampled in [a,b)."
   (+ a (random (- b a))))
