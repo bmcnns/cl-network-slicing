@@ -24,7 +24,6 @@
 
 			     ((string= command "make")
 			      (progn
-				(format t "ENV-MAKE~%")
 				(setf *env* (env-make))
 				(write-line 
 				 (json:encode-json-alist-to-string '((:success . t)))
@@ -33,7 +32,6 @@
 
 			     ((string= command "reset")
 			      (progn
-				(format t "ENV-RESET~%")
 				(multiple-value-bind (obs info)
 				    (env-reset *env* :seed (cdr (assoc :seed message)))
 				  (write-line
@@ -43,7 +41,6 @@
 
 			     ((string= command "step")
 			      (progn
-				(format t "ENV-STEP~%")
 				(multiple-value-bind (obs rew term trunc info)
 				    (env-step *env* (cdr (assoc :action message)))
 				  (write-line
@@ -58,7 +55,6 @@
 
 			     ((string= command "close")
 			      (progn
-				(format t "STOP~%")
 				(write-line
 				 (json:encode-json-alist-to-string
 				  `((:success . t)))
