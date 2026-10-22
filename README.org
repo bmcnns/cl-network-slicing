@@ -1,0 +1,190 @@
+#+title: cl-network-slicing
+
+A 5G RAN network slicing simulator in Common Lisp, built as a native
+environment for evolving Tangled Program Graph (TPG) agents. It also runs
+as a TCP server so Python agents (e.g. Stable-Baselines3 PPO) can train
+against it through a Gymnasium wrapper.
+
+A single base station shares 20 MHz of downlink bandwidth between three
+slices: *VoLTE*, *Video* and *URLLC*. Every decision step the agent
+chooses how much bandwidth each slice gets, and is rewarded with a utility
+that trades spectral efficiency against how many packets meet their
+service-level agreements (SLAs).
+
+The setup follows Hua et al. (2019) and Zhang et al. (2023); see
+[[*References][References]].
+
+* Installation
+
+Requires SBCL and three libraries, all available from Quicklisp:
+=usocket=, =bordeaux-threads= and =cl-json=.
+
+Clone the repository somewhere ASDF can find it (for example
+=~/common-lisp/= or =~/quicklisp/local-projects/=), then:
+
+#+begin_src lisp
+(ql:quickload "cl-network-slicing")   ; or (asdf:load-system "cl-network-slicing")
+#+end_src
+
+The examples below call everything through the package prefix, e.g.
+=(cl-network-slicing:server-start)=, rather than from inside the package.
+
+* Using it from Lisp
+
+#+begin_src lisp
+(defvar *env* (cl-network-slicing:env-make))
+
+(cl-network-slicing:env-reset *env* :seed 42)        ; => (104 1544 11), the first observation
+
+(cl-network-slicing:env-step *env* '(2d0 12d0 6d0))  ; VoLTE, Video, URLLC in MHz
+;; => obs, reward, terminated, truncated, info
+#+end_src
+
+The package exports:
+
+| Function                       | Description                                                                         |
+|--------------------------------+-------------------------------------------------------------------------------------|
+| =(env-make)=                   | Create a new environment.                                                           |
+| =(env-reset env &key seed)=    | Place users and start a new episode. Returns the first observation.                 |
+| =(env-step env action)=        | Apply one allocation for one decision step. Returns =obs reward terminated truncated info=. |
+| =(env-close env)=              | Release the environment.                                                            |
+| =(server-start &key host port)= | Serve the environment over TCP (default =127.0.0.1:4762=).                         |
+| =(server-stop)=                | Stop the server.                                                                    |
+
+** Episodes
+
+An episode is =*num-steps*= decision steps (default 100). Each step is
+=*slots-per-step*= scheduling slots (default 400) of 0.5 ms, so one step
+is 200 ms and an episode is 20 s of simulated time. Episodes never
+terminate early; =truncated= becomes true on the last step.
+
+** Seeding
+
+Each environment carries its own random state, so several environments
+can run in one image (for example when evaluating TPG individuals in
+parallel threads) without sharing random streams. Resetting with the
+same seed reproduces the same users, the same traffic and the same
+fading, whatever ran before it.
+
+Pass a seed on every reset when you need episodes to be comparable
+across policies.
+
+* Observation, action and reward
+
+*Observation:* the number of packets that arrived in each slice during
+the step, as a list =(volte video urllc)=. This is the state used in both
+reference papers.
+
+*Action:* a list of three bandwidths in MHz, =(volte video urllc)=.
+Negative values are clipped to zero, and allocations that sum to more
+than 20 MHz are scaled down proportionally. Each slice's transmit power
+is the base station's power scaled by its share of the band.
+
+*Reward:* the system utility
+
+#+begin_example
+U = α · SE + SSR_volte + SSR_video + SSR_urllc,   α = 0.01
+#+end_example
+
+- *Spectral efficiency (SE)* is the sum, over every user, of the user's
+  Shannon rate =w · log2(1 + SNR)= at their slice's bandwidth, divided by
+  the total bandwidth. This is the papers' definition: it depends on the
+  allocation and on where users are, not on traffic, and it makes
+  bandwidth given to the 46-user slices worth more than bandwidth given
+  to the 8-user URLLC slice.
+- *SLA satisfaction ratio (SSR)* for a slice is the number of its packets
+  that succeeded during the step divided by the number that arrived. A
+  packet succeeds when it is delivered before its deadline /and/ its
+  user's Shannon rate at the slice's bandwidth meets the slice's rate
+  SLA. Successes are counted when packets finish, so a packet that
+  arrives in one step and finishes in the next counts in the next; a
+  single step's SSR can therefore slightly exceed 1. For a whole episode,
+  sum successes and arrivals before dividing.
+
+** Info fields
+
+Every step also returns an alist with:
+
+| Field (per slice)     | Meaning                                            |
+|-----------------------+----------------------------------------------------|
+| =:*-arrivals=          | Packets that arrived this step                     |
+| =:*-successful=        | Packets that succeeded this step                   |
+| =:*-bandwidth=         | Bandwidth after rescaling (MHz)                    |
+| =:*-power=             | Transmit power (W)                                 |
+| =:*-ssr=               | Successful ÷ arrived (1.0 if nothing arrived)      |
+| =:*-queue-length=      | Packets waiting at the end of the step             |
+| =:*-dropped-timeout=   | Packets dropped for missing their deadline         |
+| =:*-dropped-overflow=  | Packets refused because the user's queue was full  |
+
+plus =:spectrum-efficiency=. =*= is =volte=, =video= or =urllc=.
+
+* Simulation parameters
+
+|                    | VoLTE            | Video                                              | URLLC                              |
+|--------------------+------------------+----------------------------------------------------+------------------------------------|
+| Users              | 46               | 46                                                 | 8                                  |
+| Inter-arrival time | Uniform, 0–160 ms | Truncated Pareto, α = 1.2, mean ≈ 6 ms, max 12.5 ms | Exponential, mean 180 ms          |
+| Packet size        | 40 B             | Truncated Pareto, α = 1.2, mean ≈ 100 B, max 250 B | One of 6.4, 12.8, 19.2, 25.6, 32 KB |
+| Rate SLA           | 51 kb/s          | 100 Mb/s                                           | 10 Mb/s                            |
+| Latency SLA        | 10 ms (20 slots) | 10 ms (20 slots)                                   | 1 ms (2 slots)                     |
+
+| Parameter          | Value                                              |
+|--------------------+----------------------------------------------------|
+| Bandwidth          | 20 MHz                                             |
+| Scheduling         | Round robin within each slice, every 0.5 ms slot   |
+| Decision interval  | 400 slots (200 ms)                                 |
+| Cell               | Users placed uniformly over a 40 m radius disc     |
+| Path loss          | 140.7 + 36.7 log10(d [km]), d ≥ 10 m               |
+| Shadowing          | Log-normal, σ = 10 dB                              |
+| Fast fading        | Rayleigh, redrawn every slot                       |
+| Antenna gain       | 5 dBi                                              |
+| Base station power | 30 dBm                                             |
+| Noise              | −174 dBm/Hz thermal, 9 dB noise figure             |
+| Queue limit        | 5000 packets per user                              |
+
+Traffic, SLAs, user counts and the cell radius follow Hua et al.; the
+decision interval and reward weights follow Zhang et al. Neither paper
+gives the channel parameters, so path loss, shadowing, antenna gain,
+transmit power and noise use the 3GPP TR 36.814 pico/hotzone values,
+which suit a 40 m cell. The rate SLA uses each user's average channel
+gain (path loss and shadowing); packet transmission uses the faded gain.
+
+* Socket server
+
+=(cl-network-slicing:server-start)= listens on =127.0.0.1:4762=. Messages are JSON objects,
+one per line, and every request gets one reply line.
+
+| Request                                           | Reply                                                                         |
+|---------------------------------------------------+-------------------------------------------------------------------------------|
+| ={"command": "spaces"}=                            | ={"numObservations": 3, "numActions": 3}=                                      |
+| ={"command": "make"}=                              | ={"success": true}=                                                           |
+| ={"command": "reset", "seed": 42}=                 | ={"obs": [...], "info": null}=                                                |
+| ={"command": "step", "action": [2.0, 12.0, 6.0]}=  | ={"obs": [...], "rew": 7.5, "term": null, "trunc": null, "info": {...}}=      |
+| ={"command": "close"}=                             | ={"success": true}=                                                           |
+
+cl-json converts keyword names to camelCase, so =:video-ssr= arrives as
+=videoSsr=. cl-json also encodes =nil= as =null=, so =term= is always
+=null= (episodes only end by truncation) and =trunc= is =null= until the
+last step, when it becomes =true=.
+
+The server handles one connection at a time and holds a single
+environment. To run vectorised environments, start one server per
+environment on separate ports.
+
+* References
+
+- Y. Hua, R. Li, Z. Zhao, X. Chen and H. Zhang, "GAN-powered deep
+  distributional reinforcement learning for resource management in
+  network slicing," /IEEE Journal on Selected Areas in Communications/,
+  vol. 38, no. 2, pp. 334–349, 2020.
+  [[https://arxiv.org/abs/1905.03929][arXiv:1905.03929]]
+- Z. Zhang, Y. Huang, C. Zhang, Q. Zheng, L. Yang and X. You, "Digital
+  twin-enhanced deep reinforcement learning for resource management in
+  networks slicing," 2023.
+  [[https://arxiv.org/abs/2311.16876][arXiv:2311.16876]]
+- 3GPP TR 36.814, /Further advancements for E-UTRA physical layer
+  aspects/, Release 9, 2010.
+
+* Authors
+
+Bryce MacInnis and Xinyi Li.
