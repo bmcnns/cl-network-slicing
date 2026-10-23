@@ -60,6 +60,9 @@
 	      nil))))
 
 (defun env-step (env action)
+  (unless (= (length action) 3)
+    (error "Action provided is not three bandwidth allocations."))
+  
   (let ((*random-state* (environment-random-state env)))
     (labels ((rescale-action (action)
 	       ;; ensure actions are never negative
