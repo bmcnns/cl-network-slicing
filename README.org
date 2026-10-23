@@ -47,7 +47,6 @@ The package exports:
 | =(env-make)=                    | Create a new environment.                                                                   |
 | =(env-reset env &key seed)=     | Place users and start a new episode. Returns the first observation.                         |
 | =(env-step env action)=         | Apply one allocation for one decision step. Returns =obs reward terminated truncated info=. |
-| =(env-close env)=               | Release the environment.                                                                    |
 | =(start-server &key host port)= | Serve the environment over TCP (default =127.0.0.1:4762=).                                  |
 | =(stop-server)=                 | Stop the server.                                                                            |
 
