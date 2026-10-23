@@ -8,6 +8,7 @@ native environment for evolving Tangled Program  Graph (TPG) agents."
 	       (:file "utils")
 	       (:file "globals")
 	       (:file "queue")
+	       (:file "network")
 	       (:file "channel")
 	       (:file "traffic")
 	       (:file "user")
