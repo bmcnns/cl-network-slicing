@@ -6,6 +6,9 @@
 (defparameter *base-station-power* (dbm->watts 30)
   "The amount of power supplied by the base station in watts.")
 
+(defparameter *antenna-gain* 5d0
+  "Base station antenna gain in dBi, from 3GPP TR 36.814 (pico/hotzone).")
+
 (defparameter *shadowing-sigma* 10d0
   "The standard deviation of shadowing (measured in dB)
    to simulate walls/objects blocking.")

@@ -9,10 +9,9 @@
 
 (defun channel-gain (distance shadowing-amount)
   "Calculate channel gain (linear scale)"
-  (let ((antenna-gain 5d0))
-    (expt 10.0d0 (- (/ (+ (- (path-loss distance) antenna-gain)
-			  shadowing-amount)
-		       10.0d0)))))
+  (expt 10.0d0 (- (/ (+ (- (path-loss distance) *antenna-gain*)
+			shadowing-amount)
+		     10.0d0))))
 
 (defun signal-noise-ratio (gain power bandwidth)
   "Calculate signal-to-noise ratio.
