@@ -83,7 +83,7 @@ is the base station's power scaled by its share of the band.
 *Reward:* the system utility
 
 #+begin_example
-U = α · SE + SSR_volte + SSR_video + SSR_urllc,   α = 0.01
+U = α · SE + (1 * SSR_volte) + (4 * SSR_video) + (6 * SSR_urllc),   α = 0.01
 #+end_example
 
 - *Spectral efficiency (SE)* is the sum, over every user, of the user's

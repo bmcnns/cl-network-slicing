@@ -32,7 +32,7 @@
 (defun utility (spectrum-efficiency volte-ssr video-ssr urllc-ssr)
   "Returns a value indicating how successful the network policy is."
   (+ (* 0.01d0 spectrum-efficiency)
-     volte-ssr
-     video-ssr
-     urllc-ssr))
+     (* 1 volte-ssr)
+     (* 4 video-ssr)
+     (* 6 urllc-ssr)))
   
