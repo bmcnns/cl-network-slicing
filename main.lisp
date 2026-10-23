@@ -59,9 +59,20 @@
 				 (json:encode-json-alist-to-string
 				  `((:success . t)))
 				 stream)
-				(finish-output stream)))))
+				(finish-output stream)))
+
+			     (t
+			      (write-line
+			       (json:encode-json-alist-to-string
+				`((:error . t)))
+			       stream)
+			      (finish-output stream))))
 		       (error ()
-			 (format t "Decoding message failed.~%"))))
+			 (write-line
+			  (json:encode-json-alist-to-string
+			   `((:error . t)))
+			  stream)
+			 (finish-output stream))))
 	(usocket:socket-error ()
 	  (return-from handle-connection)))
       (ignore-errors (usocket:socket-close conn)))))
